@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+const View3D = lazy(() => import('./View3D'));
 import type { PointerEvent as PE } from 'react';
 import { arrange, fitTablesToHall, STORAGE, uid, validate } from './model';
 import type { Document, Hall, Table, Shape } from './model';
@@ -298,6 +299,7 @@ export default function App() {
     [createPrefix, setCreatePrefix] = useState('Table'),
     [createCount, setCreateCount] = useState('1'),
     [createShape, setCreateShape] = useState<Shape>('rectangle');
+  const [is3D, setIs3D] = useState(false);
   const [creatorSofa, setCreatorSofa] = useState(false);
   const [rename, setRename] = useState<{ id: string; name: string } | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
@@ -405,7 +407,7 @@ export default function App() {
         width: 1200,
         height: 800,
       },
-    tables = doc.tables.filter((t) => t.hallId === hall.id),
+    tables = useMemo(() => doc.tables.filter((t) => t.hallId === hall.id), [doc.tables, hall.id]),
     placed = tables.filter((t) => t.placed),
     table = placed.find((t) => t.id === selected),
     chair = table?.chairs.find((c) => c.id === chairId);
@@ -759,6 +761,7 @@ export default function App() {
     setHint(null);
     setHistory((v) => v + 1);
     setResetOpen(false);
+    setIs3D(false);
   };
   const saveLayout = () => {
     try {
@@ -994,7 +997,7 @@ export default function App() {
         if ((e.target as Element).closest('[disabled][data-disabled-reason]')) setHint(null);
       }}
       onDragStart={(e) => e.preventDefault()}
-      className={`app ${fullscreen ? 'fullscreen-mode' : 'page-mode'}`}
+      className={`app ${fullscreen ? 'fullscreen-mode' : 'page-mode'} ${is3D ? 'three-mode' : ''}`}
     >
       {resetOpen && (
         <div className="reset-backdrop">
@@ -1145,6 +1148,21 @@ export default function App() {
               </div>
               <div className="map-modes">
                 <button
+                  className={`view-toggle ${is3D ? 'active' : ''}`}
+                  data-disabled-reason="Create a hall first."
+                  disabled={!hall.id}
+                  onClick={() => {
+                    setIs3D((v) => !v);
+                    setSelected(null);
+                    setChairId(null);
+                    setPanel(null);
+                    setRename(null);
+                    setHint(null);
+                  }}
+                >
+                  {is3D ? '2D editor' : '3D view'}
+                </button>
+                <button
                   className={panel === 'hall' ? 'active' : ''}
                   onClick={() => setPanel(panel === 'hall' ? null : 'hall')}
                 >
@@ -1225,6 +1243,11 @@ export default function App() {
                   </button>
                 </div>
               </div>
+              {is3D && (
+                <Suspense fallback={<div className="three-loading">Loading 3D view…</div>}>
+                  <View3D hall={hall} tables={tables} />
+                </Suspense>
+              )}
               <div className="canvas-scroll">
                 {!hall.id && (
                   <div className="onboarding">

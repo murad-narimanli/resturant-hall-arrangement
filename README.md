@@ -116,3 +116,11 @@ Format source with `npm run format`; verify with `npm run format:check`. Prettie
 Shape choices also include Straight sofa, Corner sofa and Semicircular sofa. These serialize using `sofa-straight`, `sofa-corner` and `sofa-semicircle` shape values and share the move, resize, rotate, copy and delete controls. Sofas do not have individual chair-add controls.
 
 A right-side Quick furniture library inserts table/sofa presets immediately with one click, without opening a form. The existing Add table/Add sofa buttons continue to open the detailed creator. Selected sofas use sofa-specific inspector labels. Double-click a furniture body/name to rename directly on the canvas; Enter or blur commits the name, Escape cancels.
+
+## 2D / 3D view
+
+The 3D view button opens a lazy-loaded Three.js WebGL scene based on the same active hall and placed furniture. Tables have tabletops and legs; chairs have seats, backs and legs; sofas have upholstered geometry. Positions, sizes and parent-local chair rotations match the 2D document. Orbit by dragging, zoom with the wheel, pan with right-drag, and use Reset view to reset the camera. The 2D editor button restores editing without changing the document. The application shell and fullscreen behavior are retained.
+
+3D is a read-only preview, with fixed furniture heights and illustrative materials. It requires WebGL; an error message is displayed if a renderer cannot be created. It does not add 3D model assets or change the persistence schema. GPU geometry, materials, textures, renderer and controls are disposed when leaving the view.
+
+Official references: [Three.js OrbitControls](https://threejs.org/docs/pages/OrbitControls) and [WebGLRenderer](https://threejs.org/docs/pages/WebGLRenderer).

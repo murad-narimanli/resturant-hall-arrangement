@@ -852,3 +852,53 @@ test('quick library directly inserts furniture and names are editable on canvas'
   await expect(page.getByRole('heading', { name: 'Add sofa', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Create sofa', exact: true })).toBeVisible();
 });
+
+test('3D toggle renders real furniture, supports orbit and preserves the 2D layout', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('http://127.0.0.1:5178');
+  await page.getByRole('button', { name: 'Create your first hall' }).click();
+  await page.getByRole('button', { name: 'Tables', exact: true }).click();
+  await createOneTable(page);
+  await page.getByRole('button', { name: 'Add selected tables (1)', exact: true }).click();
+  for (let i = 0; i < 4; i++)
+    await page.getByRole('button', { name: 'Add chair', exact: true }).click();
+  await page.getByTitle('Close panel', { exact: true }).click();
+  await page.getByRole('button', { name: 'Quick add l-shaped sofa', exact: true }).click();
+  const before = await page.evaluate(() => localStorage.getItem('floorplan-empty-v2'));
+  await page.getByRole('button', { name: '3D view', exact: true }).click();
+  await expect(page.locator('.three-scene')).toHaveAttribute('data-ready', 'true', {
+    timeout: 30000,
+  });
+  await expect(page.locator('.three-scene')).toHaveAttribute('data-furniture-count', '2');
+  await expect(page.locator('.three-scene canvas')).toBeVisible();
+  await expect(page.locator('svg.canvas')).toBeHidden();
+  await expect(page.locator('header')).toBeVisible();
+  await page.mouse.move(700, 450);
+  await page.mouse.down();
+  await page.mouse.move(800, 500, { steps: 10 });
+  await page.mouse.up();
+  await page.mouse.wheel(0, -100);
+  await page.getByRole('button', { name: 'Reset view', exact: true }).click();
+  await page.screenshot({ path: 'tests/three-dimensional.png' });
+  await page.getByRole('button', { name: '2D editor', exact: true }).click();
+  await expect(page.locator('svg.canvas')).toBeVisible();
+  await expect(page.locator('.three-scene canvas')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('floorplan-empty-v2'))).toBe(before);
+  expect(errors).toEqual([]);
+});
+
+test('3D view button matches the height of neighboring tools', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5178');
+  const heights = await page
+    .locator('.map-modes>button,.map-modes>.snap-chip')
+    .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
+  expect(new Set(heights).size).toBe(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobile = await page
+    .locator('.map-modes>button,.map-modes>.snap-chip')
+    .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
+  expect(new Set(mobile).size).toBe(1);
+});
